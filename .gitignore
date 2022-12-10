@@ -12,3 +12,4 @@ json_saved_data/test/*
 !json_saved_data/test/
 json_saved_data/train/*
 !json_saved_data/train/
+.ipynb_checkpoints/

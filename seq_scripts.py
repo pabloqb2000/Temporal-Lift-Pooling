@@ -66,7 +66,7 @@ def seq_eval(cfg, loader, model, device, mode, epoch, work_dir, recoder):
     stat = {i: [0, 0] for i in range(len(loader.dataset.dict))}
     print(f"Starting epoch, {len(loader)} batches")
     for batch_idx, data in enumerate(tqdm(loader)):
-        save_dir = f"./json_saved_data/{batch_idx}/"
+        save_dir = f"./json_saved_data/{mode}/{batch_idx}"
         if os.path.exists(save_dir):
             continue
         recoder.record_timer("device")
@@ -80,7 +80,7 @@ def seq_eval(cfg, loader, model, device, mode, epoch, work_dir, recoder):
             except torch.cuda.OutOfMemoryError as e:
                 print(e)
                 print(" ------- ", batch_idx)
-        save_ret_as_json(data, ret_dict, batch_idx)
+        save_ret_as_json(data, ret_dict, batch_idx, batch_dict, mode)
 
         del vid, vid_lgt, label, label_lgt, data
         torch.cuda.empty_cache()
@@ -102,8 +102,8 @@ def seq_eval(cfg, loader, model, device, mode, epoch, work_dir, recoder):
                       '{}/{}.txt'.format(work_dir, mode))
     return float(ret.split("=")[1].split("%")[0])
 
-def save_ret_as_json(data, ret_dict, batch_idx):
-    save_dir = f"./json_saved_data/{batch_idx}/"
+def save_ret_as_json(data, ret_dict, batch_idx, mode):
+    save_dir = f"./json_saved_data/{mode}/{batch_dict}/"
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
         
@@ -114,19 +114,19 @@ def save_ret_as_json(data, ret_dict, batch_idx):
             save_dict["data"] = []
             for i, d in enumerate(data):
                 if type(d) is torch.Tensor:
-                    npy_file = os.path.join(save_dir, f"data{i}_{batch_idx}.npy")
+                    npy_file = os.path.join(save_dir, f"data{i}.npy")
                     save_dict["data"].append(npy_file)
                     np.save(npy_file, d.cpu().numpy())
                 else:
                     save_dict["data"].append(d)
         else:
             if type(value) is torch.Tensor:
-                npy_file = os.path.join(save_dir, f"{key}_{batch_idx}.npy")
+                npy_file = os.path.join(save_dir, f"{key}.npy")
                 save_dict[key] = npy_file
                 np.save(npy_file, value.cpu().numpy())
             else:
                 save_dict[key] = value
-    with open(os.path.join(save_dir, f"return_dict_{batch_idx}.json"), "w+") as f:
+    with open(os.path.join(save_dir, f"return_dict.json"), "w+") as f:
         json.dump(save_dict, f)
 
 
