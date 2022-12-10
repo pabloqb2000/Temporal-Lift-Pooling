@@ -19,6 +19,7 @@ def csv2dict(anno_path, dataset_type):
     print(f"Generate information dict from {anno_path}")
     for file_idx, file_info in tqdm(enumerate(inputs_list), total=len(inputs_list)):
         name, video, start, end, speaker, orth, translation = file_info.split("|")
+        video = video.replace("/1/","/")
         num_frames = len(glob.glob(f"{info_dict['prefix']}/{dataset_type}/{video}"))
         info_dict[file_idx] = {
             'fileid': name,
@@ -61,16 +62,17 @@ def resize_img(img_path, dsize='210x260px'):
 
 def resize_dataset(video_idx, dsize, info_dict):
     info = info_dict[video_idx]
-    img_list = glob.glob(f"{info_dict['prefix']}/{info['folder']}")
-    for img_path in img_list:
+    img_list_input = glob.glob(f"{info_dict['prefix']}/{info['folder']}")
+    img_list_output = [
+        img_path.replace("210x260px", dsize) for img_path in img_list_input]
+    for img_path, rs_img_path in zip(img_list_input, img_list_output):
+        if os.path.exists(rs_img_path):
+            continue
         rs_img = resize_img(img_path, dsize=dsize)
-        rs_img_path = img_path.replace("210x260px", dsize)
         rs_img_dir = os.path.dirname(rs_img_path)
         if not os.path.exists(rs_img_dir):
             os.makedirs(rs_img_dir)
-            cv2.imwrite(rs_img_path, rs_img)
-        else:
-            cv2.imwrite(rs_img_path, rs_img)
+        cv2.imwrite(rs_img_path, rs_img)
 
 
 def run_mp_cmd(processes, process_func, process_args):
@@ -88,7 +90,7 @@ if __name__ == '__main__':
         description='Data process for Visual Alignment Constraint for Continuous Sign Language Recognition.')
     parser.add_argument('--dataset', type=str, default='phoenix2014-T',
                         help='save prefix')
-    parser.add_argument('--dataset-root', type=str, default='/disk1/dataset/PHOENIX-2014-T-release-v3/PHOENIX-2014-T',
+    parser.add_argument('--dataset-root', type=str, default='../dataset/PHOENIX-2014-T',
                         help='path to the dataset')
     parser.add_argument('--annotation-prefix', type=str, default='annotations/manual/PHOENIX-2014-T.{}.corpus.csv',
                         help='annotation prefix')

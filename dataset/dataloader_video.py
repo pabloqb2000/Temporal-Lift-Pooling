@@ -62,6 +62,7 @@ class BaseFeeder(data.Dataset):
         # load file info
         fi = self.inputs_list[index]
         img_folder = os.path.join(self.prefix, "features/fullFrame-256x256px/" + fi['folder']) if 'phoenix' in self.dataset else os.path.join(self.prefix, "features/fullFrame-256x256px/" + fi['folder'] + "/*.jpg")
+        img_folder = img_folder.replace("/1/", "/")
         img_list = sorted(glob.glob(img_folder))
 
         img_list = img_list[int(torch.randint(0, self.frame_interval, [1]))::self.frame_interval]

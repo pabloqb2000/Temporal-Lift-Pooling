@@ -25,8 +25,9 @@ class Processor():
     def __init__(self, arg):
         self.arg = arg
         if os.path.exists(self.arg.work_dir):
-            answer = input('Current dir exists, do you want to remove and refresh it?\n')
-            if answer in ['yes','y','ok','1']:
+            # answer = input('Current dir exists, do you want to remove and refresh it?\n')
+            # if answer in ['yes','y','ok','1']:
+            if True:
                 print('Dir removed !')
                 shutil.rmtree(self.arg.work_dir)
                 os.makedirs(self.arg.work_dir)
@@ -243,5 +244,5 @@ if __name__ == '__main__':
     with open(f"./configs/{args.dataset}.yaml", 'r') as f:
         args.dataset_info = yaml.load(f, Loader=yaml.FullLoader)
     processor = Processor(args)
-    utils.pack_code("./", args.work_dir)
+    # utils.pack_code("./", args.work_dir)
     processor.start()

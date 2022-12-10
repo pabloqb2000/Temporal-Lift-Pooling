@@ -2,6 +2,7 @@ import os
 import pdb
 import sys
 import copy
+import json
 import torch
 import numpy as np
 import torch.nn as nn
@@ -63,17 +64,28 @@ def seq_eval(cfg, loader, model, device, mode, epoch, work_dir, recoder):
     total_info = []
     #save_file = {}
     stat = {i: [0, 0] for i in range(len(loader.dataset.dict))}
+    print(f"Starting epoch, {len(loader)} batches")
     for batch_idx, data in enumerate(tqdm(loader)):
+        save_dir = f"./json_saved_data/{batch_idx}/"
+        if os.path.exists(save_dir):
+            continue
         recoder.record_timer("device")
         vid = device.data_to_device(data[0])
         vid_lgt = device.data_to_device(data[1])
         label = device.data_to_device(data[2])
         label_lgt = device.data_to_device(data[3])
         with torch.no_grad():
-            ret_dict = model(vid, vid_lgt, label=label, label_lgt=label_lgt)
+            try:
+                ret_dict = model(vid, vid_lgt, label=label, label_lgt=label_lgt)
+            except torch.cuda.OutOfMemoryError as e:
+                print(e)
+                print(" ------- ", batch_idx)
+        save_ret_as_json(data, ret_dict, batch_idx)
 
-        total_info += [file_name.split("|")[0] for file_name in data[-1]]
-        total_sent += ret_dict['recognized_sents']
+        del vid, vid_lgt, label, label_lgt, data
+        torch.cuda.empty_cache()
+        # total_info += [file_name.split("|")[0] for file_name in data[-1]]
+        # total_sent += ret_dict['recognized_sents']
     try:
         write2file(work_dir + "output-hypothesis-{}.ctm".format(mode), total_info, total_sent)
         ret = evaluate(prefix=work_dir, mode=mode, output_file="output-hypothesis-{}.ctm".format(mode),
@@ -89,6 +101,33 @@ def seq_eval(cfg, loader, model, device, mode, epoch, work_dir, recoder):
     recoder.print_log("Epoch {}, {} {}".format(epoch, mode, ret),
                       '{}/{}.txt'.format(work_dir, mode))
     return float(ret.split("=")[1].split("%")[0])
+
+def save_ret_as_json(data, ret_dict, batch_idx):
+    save_dir = f"./json_saved_data/{batch_idx}/"
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+        
+    ret_dict["data"] = data
+    save_dict = {}
+    for key, value in ret_dict.items():
+        if key == "data":
+            save_dict["data"] = []
+            for i, d in enumerate(data):
+                if type(d) is torch.Tensor:
+                    npy_file = os.path.join(save_dir, f"data{i}_{batch_idx}.npy")
+                    save_dict["data"].append(npy_file)
+                    np.save(npy_file, d.cpu().numpy())
+                else:
+                    save_dict["data"].append(d)
+        else:
+            if type(value) is torch.Tensor:
+                npy_file = os.path.join(save_dir, f"{key}_{batch_idx}.npy")
+                save_dict[key] = npy_file
+                np.save(npy_file, value.cpu().numpy())
+            else:
+                save_dict[key] = value
+    with open(os.path.join(save_dir, f"return_dict_{batch_idx}.json"), "w+") as f:
+        json.dump(save_dict, f)
 
 
 def seq_feature_generation(loader, model, device, mode, work_dir, recoder):
@@ -140,4 +179,3 @@ def write2file(path, info, output):
                                                  word_idx * 1.0 / 100,
                                                  (word_idx + 1) * 1.0 / 100,
                                                  word[0]))
-

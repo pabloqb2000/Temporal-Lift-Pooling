@@ -1,0 +1,6 @@
+*.tmp
+__pycache__/
+dataset/
+pretrained_models/
+work_dir/
+preprocess/phoenix2014-T/
