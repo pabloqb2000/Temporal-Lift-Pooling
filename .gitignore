@@ -4,3 +4,11 @@ dataset/
 pretrained_models/
 work_dir/
 preprocess/phoenix2014-T/
+env/
+*.py[cod]
+json_saved_data/dev/*
+!json_saved_data/dev/
+json_saved_data/test/*
+!json_saved_data/test/
+json_saved_data/train/*
+!json_saved_data/train/

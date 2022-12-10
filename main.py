@@ -149,11 +149,15 @@ class Processor():
                 model.conv2d,
                 device_ids=self.device.gpu_list,
                 output_device=self.device.output_device)
-        model.cuda()
+        if torch.cuda.is_available():
+            model.cuda()
         return model
 
     def load_model_weights(self, model, weight_path):
-        state_dict = torch.load(weight_path)
+        if torch.cuda.is_available():
+            state_dict = torch.load(weight_path)
+        else:
+            state_dict = torch.load(weight_path, map_location=torch.device('cpu'))
         if len(self.arg.ignore_weights):
             for w in self.arg.ignore_weights:
                 if state_dict.pop(w, None) is not None:
