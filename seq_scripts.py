@@ -80,7 +80,7 @@ def seq_eval(cfg, loader, model, device, mode, epoch, work_dir, recoder):
             except torch.cuda.OutOfMemoryError as e:
                 print(e)
                 print(" ------- ", batch_idx)
-        save_ret_as_json(data, ret_dict, batch_idx, batch_dict, mode)
+        save_ret_as_json(data, ret_dict, batch_idx, mode)
 
         del vid, vid_lgt, label, label_lgt, data
         torch.cuda.empty_cache()
@@ -103,7 +103,7 @@ def seq_eval(cfg, loader, model, device, mode, epoch, work_dir, recoder):
     return float(ret.split("=")[1].split("%")[0])
 
 def save_ret_as_json(data, ret_dict, batch_idx, mode):
-    save_dir = f"./json_saved_data/{mode}/{batch_dict}/"
+    save_dir = f"./json_saved_data/{mode}/{batch_idx}/"
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
         
