@@ -90,12 +90,12 @@ class Processor():
                 print('Please appoint --weights.')
             self.recoder.print_log('Model:   {}.'.format(self.arg.model))
             self.recoder.print_log('Weights: {}.'.format(self.arg.load_weights))
-            # train_wer = seq_eval(self.arg, self.data_loader["train_eval"], self.model, self.device,
-            #                      "train", 6667, self.arg.work_dir, self.recoder)
             dev_wer = seq_eval(self.arg, self.data_loader["dev"], self.model, self.device,
                                "dev", 6667, self.arg.work_dir, self.recoder)
             test_wer = seq_eval(self.arg, self.data_loader["test"], self.model, self.device,
-                                "test", 6667, self.arg.work_dir, self.recoder)
+                               "test", 6667, self.arg.work_dir, self.recoder)
+            train_wer = seq_eval(self.arg, self.data_loader["train_eval"], self.model, self.device,
+                                "train", 6667, self.arg.work_dir, self.recoder)
             self.recoder.print_log('Evaluation Done.\n')
         elif self.arg.phase == "features":
             for mode in ["train", "dev", "test"]:

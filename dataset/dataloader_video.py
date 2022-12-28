@@ -46,7 +46,11 @@ class BaseFeeder(data.Dataset):
 
     def __getitem__(self, idx):
         if self.data_type == "video":
+            if os.path.exists(f"./json_saved_data/{self.mode}/{idx}"):
+                return None, None, None
             input_data, label, _ = self.read_video(idx)
+            if input_data == None:
+                return None, None, None
             input_data, label = self.normalize(input_data, label)
             # input_data, label = self.normalize(input_data, label, fi['fileid'])
             return input_data, torch.LongTensor(label), self.inputs_list[idx]['original_info']
@@ -72,7 +76,13 @@ class BaseFeeder(data.Dataset):
                 continue
             if phase in self.dict.keys():
                 label_list.append(self.dict[phase][0])
-        return [cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB) for img_path in img_list], label_list, fi
+        read_video = None
+        try:
+            read_video = [cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB) for img_path in img_list]
+        except cv2.error:
+            print("CV2 ERROR <----->", index)
+            return None, None, None
+        return read_video, label_list, fi
 
     def read_features(self, index):
         # load file info
@@ -114,6 +124,8 @@ class BaseFeeder(data.Dataset):
 
     @staticmethod
     def collate_fn(batch):
+        if batch[0][0] == None:
+            return None, None, None, None, None
         batch = [item for item in sorted(batch, key=lambda x: len(x[0]), reverse=True)]
         video, label, info = list(zip(*batch))
         

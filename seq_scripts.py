@@ -1,6 +1,7 @@
 import os
 import pdb
 import sys
+import cv2
 import copy
 import json
 import torch
@@ -67,7 +68,7 @@ def seq_eval(cfg, loader, model, device, mode, epoch, work_dir, recoder):
     print(f"Starting epoch, {len(loader)} batches")
     for batch_idx, data in enumerate(tqdm(loader)):
         save_dir = f"./json_saved_data/{mode}/{batch_idx}"
-        if os.path.exists(save_dir):
+        if data[0] == None or os.path.exists(save_dir):
             continue
         recoder.record_timer("device")
         vid = device.data_to_device(data[0])
@@ -77,15 +78,17 @@ def seq_eval(cfg, loader, model, device, mode, epoch, work_dir, recoder):
         with torch.no_grad():
             try:
                 ret_dict = model(vid, vid_lgt, label=label, label_lgt=label_lgt)
+                save_ret_as_json(data, ret_dict, batch_idx, mode)
+                del ret_dict
             except torch.cuda.OutOfMemoryError as e:
                 print(e)
                 print(" ------- ", batch_idx)
-        save_ret_as_json(data, ret_dict, batch_idx, mode)
-
-        del vid, vid_lgt, label, label_lgt, data
+            finally:
+                del vid, vid_lgt, label, label_lgt, data
         torch.cuda.empty_cache()
         # total_info += [file_name.split("|")[0] for file_name in data[-1]]
         # total_sent += ret_dict['recognized_sents']
+    return 0
     try:
         write2file(work_dir + "output-hypothesis-{}.ctm".format(mode), total_info, total_sent)
         ret = evaluate(prefix=work_dir, mode=mode, output_file="output-hypothesis-{}.ctm".format(mode),
@@ -106,26 +109,16 @@ def save_ret_as_json(data, ret_dict, batch_idx, mode):
     save_dir = f"./json_saved_data/{mode}/{batch_idx}/"
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
-        
-    ret_dict["data"] = data
-    save_dict = {}
-    for key, value in ret_dict.items():
-        if key == "data":
-            save_dict["data"] = []
-            for i, d in enumerate(data):
-                if type(d) is torch.Tensor:
-                    npy_file = os.path.join(save_dir, f"data{i}.npy")
-                    save_dict["data"].append(npy_file)
-                    np.save(npy_file, d.cpu().numpy())
-                else:
-                    save_dict["data"].append(d)
-        else:
-            if type(value) is torch.Tensor:
-                npy_file = os.path.join(save_dir, f"{key}.npy")
-                save_dict[key] = npy_file
-                np.save(npy_file, value.cpu().numpy())
-            else:
-                save_dict[key] = value
+
+    npy_file = os.path.join(save_dir, "sequence_logits.npy")
+    np.save(npy_file, ret_dict["sequence_logits"].cpu().numpy())
+    
+    save_dict = {
+        "annotations": data[-1],
+        "predictions": ret_dict["recognized_sents"],
+        "labels": [int(n) for n in data[2].numpy()],
+        "mode": mode
+    }
     with open(os.path.join(save_dir, f"return_dict.json"), "w+") as f:
         json.dump(save_dict, f)
 
